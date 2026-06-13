@@ -8,7 +8,6 @@
 *{box-sizing:border-box;margin:0;padding:0;font-family:Arial,sans-serif}
 body{background:#f1f5f9;min-height:100vh}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-input[type="datetime-local"]{width:100%;padding:7px 9px;border-radius:7px;border:1.5px solid #e2e8f0;font-size:12px;outline:none;background:#f8fafc;margin-top:5px}
 </style>
 </head>
 <body>
@@ -65,21 +64,12 @@ function getLunes(isoWeek){
 function addDays(d,n){var r=new Date(d);r.setDate(r.getDate()+n);return r;}
 function dateKey(d){return d.toISOString().slice(0,10);}
 function getKey(mecId,date,franja){return mecId+'_'+dateKey(date)+'_'+franja.replace(':','');}
-
 function formatEntrega(dt){
   if(!dt)return '';
   var d=new Date(dt);
-  var dia=String(d.getDate()).padStart(2,'0');
-  var mes=String(d.getMonth()+1).padStart(2,'0');
-  var h=String(d.getHours()).padStart(2,'0');
-  var m=String(d.getMinutes()).padStart(2,'0');
-  return dia+'/'+mes+' '+h+':'+m;
+  return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
 }
-
-function isVencido(dt){
-  if(!dt)return false;
-  return new Date(dt)<new Date();
-}
+function isVencido(dt){return dt&&new Date(dt)<new Date();}
 
 db.ref('coches').on('value',function(s){coches=s.val()||{};render();});
 db.ref('asignaciones').on('value',function(s){asignaciones=s.val()||{};render();});
@@ -103,24 +93,40 @@ function abrirModal(mecId,dateStr,franja){
   modal={mecId:mecId,dateStr:dateStr,franja:franja};
   modalCocheId=null;
   render();
-  setTimeout(function(){
-    var el=document.getElementById('modal-desc');
-    if(el)el.focus();
-  },50);
+  setTimeout(function(){var el=document.getElementById('modal-llave');if(el)el.focus();},50);
 }
-function selCoche(id){modalCocheId=id;render();setTimeout(function(){var el=document.getElementById('modal-desc');if(el)el.focus();},50);}
+function selCoche(id){
+  modalCocheId=id;render();
+  setTimeout(function(){var el=document.getElementById('modal-llave');if(el)el.focus();},50);
+}
 function guardar(){
   if(!modal||!modalCocheId)return;
   var desc=document.getElementById('modal-desc').value.trim();
   if(!desc)return;
+  var llave=document.getElementById('modal-llave').value.trim()||'';
   var entrega=document.getElementById('modal-entrega').value||'';
   var k=getKey(modal.mecId,new Date(modal.dateStr+'T12:00:00'),modal.franja);
-  db.ref('asignaciones/'+k).set({cocheId:modalCocheId,descripcion:desc,entrega:entrega});
+  db.ref('asignaciones/'+k).set({
+    cocheId:modalCocheId,
+    descripcion:desc,
+    llave:llave,
+    entrega:entrega,
+    llaveRecibida:false,
+    materialPreparado:false
+  });
   modal=null;render();
 }
 function eliminarAsig(mecId,dateStr,franja){
   var k=getKey(mecId,new Date(dateStr+'T12:00:00'),franja);
   db.ref('asignaciones/'+k).remove();
+}
+function toggleLlave(mecId,dateStr,franja,val){
+  var k=getKey(mecId,new Date(dateStr+'T12:00:00'),franja);
+  db.ref('asignaciones/'+k+'/llaveRecibida').set(!val);
+}
+function toggleMaterial(mecId,dateStr,franja,val){
+  var k=getKey(mecId,new Date(dateStr+'T12:00:00'),franja);
+  db.ref('asignaciones/'+k+'/materialPreparado').set(!val);
 }
 function cerrarModal(){modal=null;render();}
 function cambiarSemana(d){semana=Math.min(Math.max(semana+d,1),52);render();}
@@ -131,7 +137,7 @@ function render(){
   var dias=[0,1,2,3,4].map(function(i){return addDays(lunes,i);});
   var diaActual=dias[diaActivo];
   var diaStr=dateKey(diaActual);
-  var COL=88,CW=130,CH=64;
+  var COL=88,CW=150,CH=90;
   var cochesArr=Object.values(coches);
 
   var html='<div style="display:flex;flex-direction:column;height:100vh;overflow:hidden">';
@@ -208,26 +214,47 @@ function render(){
     html+='<div style="width:100%;display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:8px;background:'+mec.color+'18;border:1.5px solid '+mec.color+'44">';
     html+='<div style="width:9px;height:9px;border-radius:50%;background:'+mec.color+'"></div>';
     html+='<span style="font-size:11px;font-weight:800;color:'+mec.color+';white-space:nowrap">'+mec.nombre+'</span></div></div>';
+
     FRANJAS.forEach(function(franja,fi){
       var k=getKey(mec.id,diaActual,franja);
       var asig=asignaciones[k];
       var coche=asig?coches[asig.cocheId]:null;
       var br=fi===0?'8px 0 0 8px':fi===FRANJAS.length-1?'0 8px 8px 0':'0';
       var bleft=fi>0?'none':'1px solid #e2e8f0';
+
       if(asig&&coche){
+        var llaveOk=!!asig.llaveRecibida;
+        var matOk=!!asig.materialPreparado;
         var vencido=isVencido(asig.entrega);
-        var bgColor=vencido?'#fee2e2':coche.color+'18';
-        var borderColor=vencido?'#fca5a5':'#e2e8f0';
-        html+='<div style="width:'+CW+'px;height:'+CH+'px;flex-shrink:0;border:1px solid '+borderColor+';border-left:'+bleft+';border-radius:'+br+';background:'+bgColor+';display:flex;align-items:center;padding:0 6px;position:relative;overflow:hidden">';
-        html+='<div style="width:4px;background:'+coche.color+';align-self:stretch;border-radius:3px;margin-right:7px;flex-shrink:0"></div>';
-        html+='<div style="flex:1;min-width:0">';
+        // Color fondo: verde si llave recibida, rojo si vencido, normal si nada
+        var bgColor= llaveOk ? '#dcfce7' : vencido ? '#fee2e2' : coche.color+'15';
+        var borderColor= llaveOk ? '#86efac' : vencido ? '#fca5a5' : '#e2e8f0';
+
+        html+='<div style="width:'+CW+'px;height:'+CH+'px;flex-shrink:0;border:1.5px solid '+borderColor+';border-left:'+bleft+';border-radius:'+br+';background:'+bgColor+';display:flex;flex-direction:column;padding:5px 6px;position:relative;overflow:hidden">';
+
+        // Fila 1: matrícula + llave
+        html+='<div style="display:flex;align-items:center;gap:4px;margin-bottom:2px">';
         html+='<div style="font-size:10px;font-weight:800;color:'+coche.color+';text-transform:uppercase">'+coche.matricula+'</div>';
-        html+='<div style="font-size:10px;color:#475569;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+asig.descripcion+'</div>';
-        if(asig.entrega){
-          html+='<div style="font-size:9px;color:'+(vencido?'#dc2626':'#16a34a')+';font-weight:700;margin-top:1px">⏰ '+formatEntrega(asig.entrega)+'</div>';
-        }
+        if(asig.llave) html+='<span style="background:'+coche.color+';color:white;border-radius:4px;padding:0 4px;font-size:9px;font-weight:700">🔑'+asig.llave+'</span>';
         html+='</div>';
-        html+='<button onclick="eliminarAsig('+mec.id+',\''+diaStr+'\',\''+franja+'\')" style="position:absolute;top:4px;right:5px;background:none;border:none;color:#cbd5e1;cursor:pointer;font-size:14px;line-height:1;padding:0">×</button></div>';
+
+        // Fila 2: descripción
+        html+='<div style="font-size:10px;color:#475569;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:2px">'+asig.descripcion+'</div>';
+
+        // Fila 3: entrega
+        if(asig.entrega){
+          html+='<div style="font-size:9px;color:'+(vencido?'#dc2626':'#16a34a')+';font-weight:700;margin-bottom:4px">⏰ '+formatEntrega(asig.entrega)+'</div>';
+        }
+
+        // Fila 4: botones
+        html+='<div style="display:flex;gap:3px;margin-top:auto">';
+        html+='<button onclick="event.stopPropagation();toggleLlave('+mec.id+',\''+diaStr+'\',\''+franja+'\','+llaveOk+')" style="flex:1;padding:2px 0;border-radius:5px;border:none;cursor:pointer;font-size:9px;font-weight:700;background:'+(llaveOk?'#16a34a':'#e2e8f0')+';color:'+(llaveOk?'white':'#64748b')+'">'+(llaveOk?'🔑 Llave ✓':'🔑 Llave')+'</button>';
+        html+='<button onclick="event.stopPropagation();toggleMaterial('+mec.id+',\''+diaStr+'\',\''+franja+'\','+matOk+')" style="flex:1;padding:2px 0;border-radius:5px;border:none;cursor:pointer;font-size:9px;font-weight:700;background:'+(matOk?'#2563eb':'#e2e8f0')+';color:'+(matOk?'white':'#64748b')+'">'+(matOk?'📦 Mat. ✓':'📦 Material')+'</button>';
+        html+='</div>';
+
+        // Botón eliminar
+        html+='<button onclick="eliminarAsig('+mec.id+',\''+diaStr+'\',\''+franja+'\')" style="position:absolute;top:3px;right:4px;background:none;border:none;color:#cbd5e1;cursor:pointer;font-size:13px;line-height:1;padding:0">×</button>';
+        html+='</div>';
       } else {
         html+='<div onclick="abrirModal('+mec.id+',\''+diaStr+'\',\''+franja+'\')" style="width:'+CW+'px;height:'+CH+'px;flex-shrink:0;border:1px solid #e2e8f0;border-left:'+bleft+';border-radius:'+br+';background:'+(fi%2===0?'white':'#fafbfc')+';display:flex;align-items:center;justify-content:center;cursor:pointer">';
         html+='<span style="color:#dde1e7;font-size:20px;font-weight:300">+</span></div>';
@@ -240,7 +267,6 @@ function render(){
   // Modal
   if(modal){
     var mec=MECANICOS.find(function(m){return m.id==modal.mecId;});
-    // Valor por defecto: hoy a las 18:00
     var now=new Date();
     var defDate=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0')+'T18:00';
     html+='<div onclick="cerrarModal()" style="position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:200">';
@@ -248,7 +274,6 @@ function render(){
     html+='<div style="font-weight:700;font-size:15px;color:#1e293b;margin-bottom:3px">Asignar trabajo</div>';
     html+='<div style="font-size:12px;color:#64748b;margin-bottom:16px">'+(mec?mec.nombre:'')+' · '+DIAS[new Date(modal.dateStr+'T12:00:00').getDay()]+' · '+modal.franja+'h</div>';
 
-    // Vehículo
     html+='<div style="margin-bottom:14px"><div style="font-size:11px;font-weight:700;color:#475569;margin-bottom:7px;text-transform:uppercase">Vehículo</div>';
     if(cochesArr.length===0) html+='<div style="font-size:12px;color:#94a3b8">Añade vehículos primero</div>';
     html+='<div style="display:flex;flex-wrap:wrap;gap:6px">';
@@ -259,11 +284,12 @@ function render(){
     });
     html+='</div></div>';
 
-    // Descripción
-    html+='<div style="font-size:11px;font-weight:700;color:#475569;margin-bottom:5px;text-transform:uppercase">Tarea</div>';
-    html+='<input id="modal-desc" placeholder="Ej: Cambio aceite, pastillas freno..." onkeydown="if(event.key===\'Enter\')guardar()" style="width:100%;padding:9px 10px;border-radius:7px;border:1.5px solid #e2e8f0;font-size:13px;outline:none;background:#f8fafc;margin-bottom:14px"/>';
+    html+='<div style="font-size:11px;font-weight:700;color:#475569;margin-bottom:5px;text-transform:uppercase">🔑 Nº de Llave</div>';
+    html+='<input id="modal-llave" placeholder="Ej: 12, A3, Caja 2..." style="width:100%;padding:9px 10px;border-radius:7px;border:1.5px solid #e2e8f0;font-size:13px;outline:none;background:#f8fafc;margin-bottom:14px"/>';
 
-    // Hora de entrega
+    html+='<div style="font-size:11px;font-weight:700;color:#475569;margin-bottom:5px;text-transform:uppercase">Tarea</div>';
+    html+='<input id="modal-desc" placeholder="Ej: Cambio aceite, pastillas freno..." style="width:100%;padding:9px 10px;border-radius:7px;border:1.5px solid #e2e8f0;font-size:13px;outline:none;background:#f8fafc;margin-bottom:14px"/>';
+
     html+='<div style="font-size:11px;font-weight:700;color:#475569;margin-bottom:5px;text-transform:uppercase">📅 Fecha y hora de entrega</div>';
     html+='<input id="modal-entrega" type="datetime-local" value="'+defDate+'" style="width:100%;padding:9px 10px;border-radius:7px;border:1.5px solid #e2e8f0;font-size:13px;outline:none;background:#f8fafc;margin-bottom:16px"/>';
 
