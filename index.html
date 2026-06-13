@@ -157,6 +157,12 @@ function toggleComida(mecId,dateStr,franja){
     db.ref('asignaciones/'+k).set({comida:true});
   }
 }
+function marcarComida(){
+  if(!modal)return;
+  var k=getKey(modal.mecId,new Date(modal.dateStr+'T12:00:00'),modal.franja);
+  db.ref('asignaciones/'+k).set({comida:true});
+  modal=null;render();
+}
 function cerrarModal(){modal=null;render();}
 function cambiarSemana(d){semana=Math.min(Math.max(semana+d,1),52);render();}
 
@@ -283,7 +289,6 @@ function render(){
       } else {
         html+='<div style="width:'+CW+'px;height:'+CH+'px;flex-shrink:0;border:1px solid #e2e8f0;border-left:'+bleft+';border-radius:'+br+';background:'+(fi%2===0?'white':'#fafbfc')+';display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;gap:4px">';
         html+='<div onclick="abrirModal('+mec.id+',\''+diaStr+'\',\''+franja+'\')" style="width:100%;flex:1;display:flex;align-items:center;justify-content:center"><span style="color:#dde1e7;font-size:18px;font-weight:300">+</span></div>';
-        html+='<button onclick="toggleComida('+mec.id+',\''+diaStr+'\',\''+franja+'\')" style="width:100%;padding:2px 0;border:none;border-top:1px solid #f1f5f9;background:transparent;cursor:pointer;font-size:9px;color:#fdba74;font-weight:700">🍽️ Comida</button>';
         html+='</div>';
       }
     });
