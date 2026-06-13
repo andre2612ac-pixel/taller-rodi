@@ -148,16 +148,24 @@ function toggleMaterial(mecId,dateStr,franja,val){
   var k=getKey(mecId,new Date(dateStr+'T12:00:00'),franja);
   db.ref('asignaciones/'+k+'/materialPreparado').set(!val);
 }
+function toggleComida(mecId,dateStr,franja){
+  var k=getKey(mecId,new Date(dateStr+'T12:00:00'),franja);
+  var asig=asignaciones[k];
+  if(asig&&asig.comida){
+    db.ref('asignaciones/'+k).remove();
+  } else {
+    db.ref('asignaciones/'+k).set({comida:true});
+  }
+}
 function cerrarModal(){modal=null;render();}
 function cambiarSemana(d){semana=Math.min(Math.max(semana+d,1),52);render();}
-function setDia(i){diaActivo=i;render();}
 
 function render(){
   var lunes=getLunes(semana);
   var dias=[0,1,2,3,4].map(function(i){return addDays(lunes,i);});
   var diaActual=dias[diaActivo];
   var diaStr=dateKey(diaActual);
-  var COL=80,CW=128,CH=88;
+  var COL=80,CW=128,CH=62;
   var cochesArr=Object.values(coches);
 
   var html='<div style="display:flex;flex-direction:column;height:100vh;overflow:hidden">';
@@ -233,7 +241,13 @@ function render(){
       var br=fi===0?'8px 0 0 8px':fi===FRANJAS.length-1?'0 8px 8px 0':'0';
       var bleft=fi>0?'none':'1px solid #e2e8f0';
 
-      if(asig&&coche){
+      if(asig&&asig.comida){
+        html+='<div oncontextmenu="event.preventDefault();toggleComida('+mec.id+',\''+diaStr+'\',\''+franja+'\')" style="width:'+CW+'px;height:'+CH+'px;flex-shrink:0;border:1px solid #fed7aa;border-left:'+bleft+';border-radius:'+br+';background:#fff7ed;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;position:relative" onclick="toggleComida('+mec.id+',\''+diaStr+'\',\''+franja+'\')">';
+        html+='<div style="font-size:18px">🍽️</div>';
+        html+='<div style="font-size:9px;font-weight:700;color:#ea580c">COMIDA</div>';
+        html+='<div style="font-size:8px;color:#fdba74">clic para quitar</div>';
+        html+='</div>';
+      } else if(asig&&coche){
         var llaveOk=!!asig.llaveRecibida;
         var matOk=!!asig.materialPreparado;
         var vencido=isVencido(asig.entrega);
@@ -267,8 +281,10 @@ function render(){
         html+='<button onclick="eliminarAsig('+mec.id+',\''+diaStr+'\',\''+franja+'\')" style="position:absolute;top:3px;right:4px;background:none;border:none;color:#cbd5e1;cursor:pointer;font-size:13px;line-height:1;padding:0">×</button>';
         html+='</div>';
       } else {
-        html+='<div onclick="abrirModal('+mec.id+',\''+diaStr+'\',\''+franja+'\')" style="width:'+CW+'px;height:'+CH+'px;flex-shrink:0;border:1px solid #e2e8f0;border-left:'+bleft+';border-radius:'+br+';background:'+(fi%2===0?'white':'#fafbfc')+';display:flex;align-items:center;justify-content:center;cursor:pointer">';
-        html+='<span style="color:#dde1e7;font-size:20px;font-weight:300">+</span></div>';
+        html+='<div style="width:'+CW+'px;height:'+CH+'px;flex-shrink:0;border:1px solid #e2e8f0;border-left:'+bleft+';border-radius:'+br+';background:'+(fi%2===0?'white':'#fafbfc')+';display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;gap:4px">';
+        html+='<div onclick="abrirModal('+mec.id+',\''+diaStr+'\',\''+franja+'\')" style="width:100%;flex:1;display:flex;align-items:center;justify-content:center"><span style="color:#dde1e7;font-size:18px;font-weight:300">+</span></div>';
+        html+='<button onclick="toggleComida('+mec.id+',\''+diaStr+'\',\''+franja+'\')" style="width:100%;padding:2px 0;border:none;border-top:1px solid #f1f5f9;background:transparent;cursor:pointer;font-size:9px;color:#fdba74;font-weight:700">🍽️ Comida</button>';
+        html+='</div>';
       }
     });
     html+='</div>';
