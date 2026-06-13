@@ -1,1 +1,237 @@
-hola
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Planificador Taller Rodi</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:Arial,sans-serif}
+body{background:#f1f5f9;min-height:100vh}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+</style>
+</head>
+<body>
+<div id="app" style="display:flex;align-items:center;justify-content:center;height:100vh;font-size:16px;color:#64748b">Cargando...</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script>
+firebase.initializeApp({
+  apiKey:"AIzaSyAku229brCi0uaqdWtjABkrkKgijXhr-yk",
+  authDomain:"alm-243-rodi.firebaseapp.com",
+  databaseURL:"https://alm-243-rodi-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId:"alm-243-rodi",
+  storageBucket:"alm-243-rodi.firebasestorage.app",
+  messagingSenderId:"225425074223",
+  appId:"1:225425074223:web:faaca35eb22da1248abeda"
+});
+var db = firebase.database();
+
+var MECANICOS=[
+  {id:1,nombre:"Jordi",color:"#2563eb"},
+  {id:2,nombre:"James",color:"#7c3aed"},
+  {id:3,nombre:"Javi",color:"#0891b2"},
+  {id:4,nombre:"Joni",color:"#16a34a"},
+  {id:5,nombre:"Curti",color:"#d97706"},
+  {id:6,nombre:"Pau",color:"#dc2626"}
+];
+var COLORES=["#1d4ed8","#7c3aed","#0e7490","#15803d","#b45309","#b91c1c","#be185d","#0369a1","#4338ca","#065f46"];
+var FRANJAS=[];
+for(var h=8;h<=18;h++) FRANJAS.push((h<10?'0':'')+h+':00');
+var DIAS=["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
+var MESES=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+
+var coches={}, asignaciones={}, conectado=false;
+var semana=getISOWeek(new Date());
+var hoy=new Date().getDay();
+var diaActivo=hoy>=1&&hoy<=5?hoy-1:0;
+var modal=null, modalCocheId=null, colorIdx=0;
+
+function getISOWeek(d){
+  var date=new Date(d); date.setHours(0,0,0,0);
+  date.setDate(date.getDate()+3-((date.getDay()+6)%7));
+  var w1=new Date(date.getFullYear(),0,4);
+  return 1+Math.round(((date-w1)/86400000-3+((w1.getDay()+6)%7))/7);
+}
+function getLunes(isoWeek){
+  var jan4=new Date(2026,0,4);
+  var l1=new Date(jan4);
+  l1.setDate(jan4.getDate()-((jan4.getDay()+6)%7));
+  var l=new Date(l1);
+  l.setDate(l1.getDate()+(isoWeek-1)*7);
+  return l;
+}
+function addDays(d,n){var r=new Date(d);r.setDate(r.getDate()+n);return r;}
+function dateKey(d){return d.toISOString().slice(0,10);}
+function getKey(mecId,date,franja){return mecId+'_'+dateKey(date)+'_'+franja.replace(':','');}
+
+db.ref('coches').on('value',function(s){coches=s.val()||{};render();});
+db.ref('asignaciones').on('value',function(s){asignaciones=s.val()||{};render();});
+db.ref('.info/connected').on('value',function(s){conectado=!!s.val();render();});
+
+function agregarCoche(){
+  var mat=document.getElementById('inp-mat').value.trim().toUpperCase();
+  var mod=document.getElementById('inp-mod').value.trim()||'Sin modelo';
+  if(!mat)return;
+  var id=Date.now();
+  db.ref('coches/'+id).set({id:id,matricula:mat,modelo:mod,color:COLORES[colorIdx%COLORES.length]});
+  colorIdx++;
+  document.getElementById('inp-mat').value='';
+  document.getElementById('inp-mod').value='';
+}
+function eliminarCoche(id){
+  db.ref('coches/'+id).remove();
+  Object.keys(asignaciones).forEach(function(k){if(asignaciones[k].cocheId==id)db.ref('asignaciones/'+k).remove();});
+}
+function abrirModal(mecId,dateStr,franja){modal={mecId:mecId,dateStr:dateStr,franja:franja};modalCocheId=null;render();}
+function selCoche(id){modalCocheId=id;render();}
+function guardar(){
+  if(!modal||!modalCocheId)return;
+  var desc=document.getElementById('modal-desc').value.trim();
+  if(!desc)return;
+  var k=getKey(modal.mecId,new Date(modal.dateStr+'T12:00:00'),modal.franja);
+  db.ref('asignaciones/'+k).set({cocheId:modalCocheId,descripcion:desc});
+  modal=null;render();
+}
+function eliminarAsig(mecId,dateStr,franja){
+  var k=getKey(mecId,new Date(dateStr+'T12:00:00'),franja);
+  db.ref('asignaciones/'+k).remove();
+}
+function cerrarModal(){modal=null;render();}
+function cambiarSemana(d){semana=Math.min(Math.max(semana+d,1),52);render();}
+function setDia(i){diaActivo=i;render();}
+
+function render(){
+  var lunes=getLunes(semana);
+  var dias=[0,1,2,3,4].map(function(i){return addDays(lunes,i);});
+  var diaActual=dias[diaActivo];
+  var diaStr=dateKey(diaActual);
+  var COL=88,CW=118,CH=54;
+
+  var html='<div style="display:flex;flex-direction:column;height:100vh;overflow:hidden">';
+
+  // Header
+  html+='<div style="background:#1e293b;padding:10px 18px;display:flex;align-items:center;gap:10px;flex-shrink:0">';
+  html+='<span style="font-size:22px">🔧</span>';
+  html+='<div style="flex:1"><div style="color:white;font-weight:700;font-size:16px">Planificador de Taller · Rodi</div>';
+  html+='<div style="color:#94a3b8;font-size:11px">Vista diaria · Lunes a Viernes</div></div>';
+  html+='<div style="display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;background:'+(conectado?'#16a34a22':'#dc262622')+'">';
+  html+='<div style="width:8px;height:8px;border-radius:50%;background:'+(conectado?'#16a34a':'#dc2626')+';'+(conectado?'animation:pulse 2s infinite':'')+'""></div>';
+  html+='<span style="font-size:11px;font-weight:700;color:'+(conectado?'#16a34a':'#dc2626')+'">'+(conectado?'En línea · Sincronizado':'Conectando...')+'</span></div></div>';
+
+  html+='<div style="display:flex;flex:1;overflow:hidden">';
+
+  // Panel izquierdo
+  html+='<div style="width:190px;background:white;border-right:1px solid #e2e8f0;display:flex;flex-direction:column;flex-shrink:0">';
+  html+='<div style="padding:12px 10px 8px;border-bottom:1px solid #e2e8f0">';
+  html+='<div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Mecánicos</div>';
+  MECANICOS.forEach(function(m){
+    html+='<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;margin-bottom:3px;background:#f8fafc;border:1.5px solid #e2e8f0">';
+    html+='<div style="width:10px;height:10px;border-radius:50%;background:'+m.color+'"></div>';
+    html+='<span style="font-size:12px;font-weight:700;color:#334155">'+m.nombre+'</span></div>';
+  });
+  html+='</div>';
+  html+='<div style="padding:10px;flex:1;overflow-y:auto">';
+  html+='<div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Vehículos</div>';
+  html+='<input id="inp-mat" placeholder="Matrícula" onkeydown="if(event.key===\'Enter\')agregarCoche()" style="width:100%;padding:7px 9px;border-radius:7px;border:1.5px solid #e2e8f0;font-size:12px;outline:none;background:#f8fafc"/>';
+  html+='<input id="inp-mod" placeholder="Modelo" onkeydown="if(event.key===\'Enter\')agregarCoche()" style="width:100%;padding:7px 9px;border-radius:7px;border:1.5px solid #e2e8f0;font-size:12px;outline:none;background:#f8fafc;margin-top:5px"/>';
+  html+='<button onclick="agregarCoche()" style="width:100%;margin-top:6px;padding:7px 0;background:#2563eb;color:white;border:none;border-radius:7px;font-weight:700;font-size:12px;cursor:pointer">+ Añadir</button>';
+  html+='<div style="margin-top:8px">';
+  var cochesArr=Object.values(coches);
+  if(cochesArr.length===0) html+='<div style="color:#cbd5e1;font-size:11px;text-align:center;padding-top:8px">Sin vehículos</div>';
+  cochesArr.forEach(function(c){
+    html+='<div style="display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:7px;margin-bottom:4px;background:#f8fafc;border:1px solid #e2e8f0">';
+    html+='<div style="width:9px;height:9px;border-radius:50%;background:'+c.color+'"></div>';
+    html+='<div style="flex:1;min-width:0"><div style="font-size:11px;font-weight:700;color:#1e293b">'+c.matricula+'</div>';
+    html+='<div style="font-size:10px;color:#64748b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+c.modelo+'</div></div>';
+    html+='<button onclick="eliminarCoche('+c.id+')" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:15px">×</button></div>';
+  });
+  html+='</div></div></div>';
+
+  // Panel principal
+  html+='<div style="flex:1;display:flex;flex-direction:column;overflow:hidden">';
+  html+='<div style="background:white;border-bottom:1px solid #e2e8f0;padding:10px 16px;flex-shrink:0">';
+  html+='<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">';
+  html+='<button onclick="cambiarSemana(-1)" style="width:34px;height:34px;border-radius:8px;border:1px solid #e2e8f0;background:white;font-size:18px;cursor:pointer;font-weight:700">‹</button>';
+  html+='<div style="flex:1;text-align:center;font-weight:700;font-size:13px;color:#1e293b">Semana '+semana+' · '+MESES[dias[0].getMonth()]+' 2026</div>';
+  html+='<button onclick="cambiarSemana(1)" style="width:34px;height:34px;border-radius:8px;border:1px solid #e2e8f0;background:white;font-size:18px;cursor:pointer;font-weight:700">›</button></div>';
+  html+='<div style="display:flex;gap:6px">';
+  dias.forEach(function(dia,di){
+    var act=diaActivo===di;
+    html+='<button onclick="setDia('+di+')" style="flex:1;padding:8px 4px;border-radius:10px;border:none;cursor:pointer;background:'+(act?'#1e293b':'#f1f5f9')+';color:'+(act?'white':'#475569')+';box-shadow:'+(act?'0 2px 8px rgba(0,0,0,.18)':'none')+'">';
+    html+='<div style="font-size:10px;font-weight:600;opacity:.7">'+DIAS[dia.getDay()].slice(0,3).toUpperCase()+'</div>';
+    html+='<div style="font-size:16px;font-weight:800;line-height:1.2">'+dia.getDate()+'</div>';
+    html+='<div style="font-size:9px;opacity:.6">'+MESES[dia.getMonth()].slice(0,3)+'</div></button>';
+  });
+  html+='</div></div>';
+
+  // Cuadrícula
+  html+='<div style="flex:1;overflow:auto;padding:14px">';
+  html+='<div style="display:inline-block;min-width:'+(COL+FRANJAS.length*CW)+'px">';
+  html+='<div style="display:flex;margin-bottom:4px"><div style="width:'+COL+'px"></div>';
+  FRANJAS.forEach(function(f,fi){
+    html+='<div style="width:'+CW+'px;flex-shrink:0;text-align:center;font-size:11px;font-weight:700;color:#64748b;padding:5px 0;';
+    html+='background:'+(fi%2===0?'#f8fafc':'white')+';border-left:1px solid #e2e8f0;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;';
+    html+='border-right:'+(fi===FRANJAS.length-1?'1px solid #e2e8f0':'none')+';';
+    html+='border-radius:'+(fi===0?'8px 0 0 8px':fi===FRANJAS.length-1?'0 8px 8px 0':'0')+'">'+f+'</div>';
+  });
+  html+='</div>';
+
+  MECANICOS.forEach(function(mec){
+    html+='<div style="display:flex;margin-bottom:5px">';
+    html+='<div style="width:'+COL+'px;flex-shrink:0;display:flex;align-items:center;padding-right:8px">';
+    html+='<div style="width:100%;display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:8px;background:'+mec.color+'18;border:1.5px solid '+mec.color+'44">';
+    html+='<div style="width:9px;height:9px;border-radius:50%;background:'+mec.color+'"></div>';
+    html+='<span style="font-size:11px;font-weight:800;color:'+mec.color+';white-space:nowrap">'+mec.nombre+'</span></div></div>';
+    FRANJAS.forEach(function(franja,fi){
+      var k=getKey(mec.id,diaActual,franja);
+      var asig=asignaciones[k];
+      var coche=asig?coches[asig.cocheId]:null;
+      var br=fi===0?'8px 0 0 8px':fi===FRANJAS.length-1?'0 8px 8px 0':'0';
+      var bleft=fi>0?'none':'1px solid #e2e8f0';
+      if(asig&&coche){
+        html+='<div style="width:'+CW+'px;height:'+CH+'px;flex-shrink:0;border:1px solid #e2e8f0;border-left:'+bleft+';border-radius:'+br+';background:'+coche.color+'18;display:flex;align-items:center;padding:0 6px;position:relative;overflow:hidden">';
+        html+='<div style="width:4px;background:'+coche.color+';align-self:stretch;border-radius:3px;margin-right:7px;flex-shrink:0"></div>';
+        html+='<div style="flex:1;min-width:0">';
+        html+='<div style="font-size:10px;font-weight:800;color:'+coche.color+';text-transform:uppercase">'+coche.matricula+'</div>';
+        html+='<div style="font-size:10px;color:#475569;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+coche.modelo+'</div>';
+        html+='<div style="font-size:9px;color:#94a3b8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+asig.descripcion+'</div></div>';
+        html+='<button onclick="eliminarAsig('+mec.id+',\''+diaStr+'\',\''+franja+'\')" style="position:absolute;top:4px;right:5px;background:none;border:none;color:#cbd5e1;cursor:pointer;font-size:14px;line-height:1;padding:0">×</button></div>';
+      } else {
+        html+='<div onclick="abrirModal('+mec.id+',\''+diaStr+'\',\''+franja+'\')" style="width:'+CW+'px;height:'+CH+'px;flex-shrink:0;border:1px solid #e2e8f0;border-left:'+bleft+';border-radius:'+br+';background:'+(fi%2===0?'white':'#fafbfc')+';display:flex;align-items:center;justify-content:center;cursor:pointer">';
+        html+='<span style="color:#dde1e7;font-size:20px;font-weight:300">+</span></div>';
+      }
+    });
+    html+='</div>';
+  });
+  html+='</div></div></div></div>';
+
+  // Modal
+  if(modal){
+    var mec=MECANICOS.find(function(m){return m.id==modal.mecId;});
+    html+='<div onclick="cerrarModal()" style="position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:200">';
+    html+='<div onclick="event.stopPropagation()" style="background:white;border-radius:16px;padding:24px;width:360px;box-shadow:0 20px 50px rgba(0,0,0,.25)">';
+    html+='<div style="font-weight:700;font-size:15px;color:#1e293b;margin-bottom:3px">Asignar trabajo</div>';
+    html+='<div style="font-size:12px;color:#64748b;margin-bottom:16px">'+(mec?mec.nombre:'')+' · '+DIAS[new Date(modal.dateStr+'T12:00:00').getDay()]+' · '+modal.franja+'h</div>';
+    html+='<div style="margin-bottom:14px"><div style="font-size:11px;font-weight:700;color:#475569;margin-bottom:7px;text-transform:uppercase">Vehículo</div>';
+    if(cochesArr.length===0) html+='<div style="font-size:12px;color:#94a3b8">Añade vehículos primero</div>';
+    html+='<div style="display:flex;flex-wrap:wrap;gap:6px">';
+    cochesArr.forEach(function(c){
+      var sel=modalCocheId==c.id;
+      html+='<button onclick="selCoche('+c.id+')" style="display:flex;align-items:center;gap:5px;padding:5px 11px;border-radius:20px;border:2px solid '+(sel?c.color:'#e2e8f0')+';background:'+(sel?c.color+'18':'#f8fafc')+';color:'+(sel?c.color:'#64748b')+';font-weight:700;font-size:12px;cursor:pointer">';
+      html+='<span style="width:8px;height:8px;border-radius:50%;background:'+c.color+';display:inline-block"></span>'+c.matricula+'</button>';
+    });
+    html+='</div></div>';
+    html+='<input id="modal-desc" autofocus placeholder="Ej: Cambio aceite, pastillas freno..." onkeydown="if(event.key===\'Enter\')guardar()" style="width:100%;padding:9px 10px;border-radius:7px;border:1.5px solid #e2e8f0;font-size:13px;outline:none;background:#f8fafc;margin-bottom:14px"/>';
+    html+='<div style="display:flex;gap:8px">';
+    html+='<button onclick="guardar()" style="flex:1;padding:9px 0;background:#2563eb;color:white;border:none;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer">✓ Guardar</button>';
+    html+='<button onclick="cerrarModal()" style="flex:1;padding:9px 0;background:#f1f5f9;color:#475569;border:none;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer">Cancelar</button>';
+    html+='</div></div></div>';
+  }
+
+  html+='</div>';
+  document.getElementById('app').innerHTML=html;
+}
+</script>
+</body>
+</html>
