@@ -194,20 +194,18 @@ function render(){
 
   // Panel principal
   html+='<div style="flex:1;display:flex;flex-direction:column;overflow:hidden">';
-  html+='<div style="background:white;border-bottom:1px solid #e2e8f0;padding:6px 12px;flex-shrink:0">';
-  html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">';
-  html+='<button onclick="cambiarSemana(-1)" style="width:26px;height:26px;border-radius:6px;border:1px solid #e2e8f0;background:white;font-size:14px;cursor:pointer;font-weight:700">‹</button>';
-  html+='<div style="flex:1;text-align:center;font-weight:700;font-size:12px;color:#1e293b">Semana '+semana+' · '+MESES[dias[0].getMonth()]+' 2026</div>';
-  html+='<button onclick="cambiarSemana(1)" style="width:26px;height:26px;border-radius:6px;border:1px solid #e2e8f0;background:white;font-size:14px;cursor:pointer;font-weight:700">›</button></div>';
-  html+='<div style="display:flex;gap:4px">';
+  html+='<div style="background:white;border-bottom:1px solid #e2e8f0;padding:4px 10px;flex-shrink:0;display:flex;align-items:center;gap:6px">';
+  html+='<button onclick="cambiarSemana(-1)" style="width:24px;height:24px;border-radius:6px;border:1px solid #e2e8f0;background:white;font-size:13px;cursor:pointer;font-weight:700;flex-shrink:0">‹</button>';
+  html+='<div style="font-size:11px;font-weight:700;color:#94a3b8;white-space:nowrap">Sem '+semana+'</div>';
+  html+='<div style="display:flex;gap:3px;flex:1">';
   dias.forEach(function(dia,di){
     var act=diaActivo===di;
-    html+='<button onclick="setDia('+di+')" style="flex:1;padding:4px 2px;border-radius:8px;border:none;cursor:pointer;background:'+(act?'#1e293b':'#f1f5f9')+';color:'+(act?'white':'#475569')+';box-shadow:'+(act?'0 2px 6px rgba(0,0,0,.15)':'none')+'">';
-    html+='<div style="font-size:9px;font-weight:600;opacity:.7">'+DIAS[dia.getDay()].slice(0,3).toUpperCase()+'</div>';
-    html+='<div style="font-size:13px;font-weight:800;line-height:1.2">'+dia.getDate()+'</div>';
-    html+='<div style="font-size:8px;opacity:.6">'+MESES[dia.getMonth()].slice(0,3)+'</div></button>';
+    html+='<button onclick="setDia('+di+')" style="flex:1;padding:3px 2px;border-radius:6px;border:none;cursor:pointer;background:'+(act?'#1e293b':'#f1f5f9')+';color:'+(act?'white':'#64748b')+';font-size:11px;font-weight:700;white-space:nowrap">';
+    html+=DIAS[dia.getDay()].slice(0,3)+' '+dia.getDate()+'</button>';
   });
-  html+='</div></div>';
+  html+='</div>';
+  html+='<button onclick="cambiarSemana(1)" style="width:24px;height:24px;border-radius:6px;border:1px solid #e2e8f0;background:white;font-size:13px;cursor:pointer;font-weight:700;flex-shrink:0">›</button>';
+  html+='</div>';
 
   // Cuadrícula
   html+='<div style="flex:1;overflow:auto;padding:14px">';
