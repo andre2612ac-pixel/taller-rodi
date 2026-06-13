@@ -175,14 +175,7 @@ function render(){
 
   // Panel izquierdo
   html+='<div style="width:190px;background:white;border-right:1px solid #e2e8f0;display:flex;flex-direction:column;flex-shrink:0">';
-  html+='<div style="padding:12px 10px 8px;border-bottom:1px solid #e2e8f0">';
-  html+='<div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Mecánicos</div>';
-  MECANICOS.forEach(function(m){
-    html+='<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;margin-bottom:3px;background:#f8fafc;border:1.5px solid #e2e8f0">';
-    html+='<div style="width:10px;height:10px;border-radius:50%;background:'+m.color+'"></div>';
-    html+='<span style="font-size:12px;font-weight:700;color:#334155">'+m.nombre+'</span></div>';
-  });
-  html+='</div>';
+
   html+='<div style="padding:10px;flex:1;overflow-y:auto">';
   html+='<div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Vehículos</div>';
   html+='<input id="inp-mat" placeholder="Matrícula" onkeydown="if(event.key===\'Enter\')agregarCoche()" style="width:100%;padding:7px 9px;border-radius:7px;border:1.5px solid #e2e8f0;font-size:12px;outline:none;background:#f8fafc"/>';
