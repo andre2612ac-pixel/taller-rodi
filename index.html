@@ -122,7 +122,16 @@ function eliminarAsig(mecId,dateStr,franja){
 }
 function toggleLlave(mecId,dateStr,franja,val){
   var k=getKey(mecId,new Date(dateStr+'T12:00:00'),franja);
-  db.ref('asignaciones/'+k+'/llaveRecibida').set(!val);
+  if(val){
+    // Si ya está activado, desactivar
+    db.ref('asignaciones/'+k+'/llaveRecibida').set(false);
+    db.ref('asignaciones/'+k+'/llaveNumero').set('');
+  } else {
+    var num=prompt('Número de llave recibida:');
+    if(num===null)return;
+    db.ref('asignaciones/'+k+'/llaveRecibida').set(true);
+    db.ref('asignaciones/'+k+'/llaveNumero').set(num.trim());
+  }
 }
 function toggleMaterial(mecId,dateStr,franja,val){
   var k=getKey(mecId,new Date(dateStr+'T12:00:00'),franja);
@@ -227,8 +236,8 @@ function render(){
         var matOk=!!asig.materialPreparado;
         var vencido=isVencido(asig.entrega);
         // Color fondo: verde si llave recibida, rojo si vencido, normal si nada
-        var bgColor= llaveOk ? '#dcfce7' : vencido ? '#fee2e2' : coche.color+'15';
-        var borderColor= llaveOk ? '#86efac' : vencido ? '#fca5a5' : '#e2e8f0';
+        var bgColor= (llaveOk&&matOk) ? '#dcfce7' : llaveOk ? '#fef9c3' : vencido ? '#fee2e2' : coche.color+'15';
+        var borderColor= (llaveOk&&matOk) ? '#86efac' : llaveOk ? '#fde047' : vencido ? '#fca5a5' : '#e2e8f0';
 
         html+='<div style="width:'+CW+'px;height:'+CH+'px;flex-shrink:0;border:1.5px solid '+borderColor+';border-left:'+bleft+';border-radius:'+br+';background:'+bgColor+';display:flex;flex-direction:column;padding:5px 6px;position:relative;overflow:hidden">';
 
@@ -248,7 +257,7 @@ function render(){
 
         // Fila 4: botones
         html+='<div style="display:flex;gap:3px;margin-top:auto">';
-        html+='<button onclick="event.stopPropagation();toggleLlave('+mec.id+',\''+diaStr+'\',\''+franja+'\','+llaveOk+')" style="flex:1;padding:2px 0;border-radius:5px;border:none;cursor:pointer;font-size:9px;font-weight:700;background:'+(llaveOk?'#16a34a':'#e2e8f0')+';color:'+(llaveOk?'white':'#64748b')+'">'+(llaveOk?'🔑 Llave ✓':'🔑 Llave')+'</button>';
+        html+='<button onclick="event.stopPropagation();toggleLlave('+mec.id+',\''+diaStr+'\',\''+franja+'\','+llaveOk+')" style="flex:1;padding:2px 0;border-radius:5px;border:none;cursor:pointer;font-size:9px;font-weight:700;background:'+(llaveOk?'#ca8a04':'#e2e8f0')+';color:'+(llaveOk?'white':'#64748b')+'">'+(llaveOk?'🔑 '+(asig.llaveNumero||'')+'  ✓':'🔑 Llave')+'</button>';
         html+='<button onclick="event.stopPropagation();toggleMaterial('+mec.id+',\''+diaStr+'\',\''+franja+'\','+matOk+')" style="flex:1;padding:2px 0;border-radius:5px;border:none;cursor:pointer;font-size:9px;font-weight:700;background:'+(matOk?'#2563eb':'#e2e8f0')+';color:'+(matOk?'white':'#64748b')+'">'+(matOk?'📦 Mat. ✓':'📦 Material')+'</button>';
         html+='</div>';
 
