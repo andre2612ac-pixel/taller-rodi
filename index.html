@@ -320,7 +320,10 @@ function render(){
     html+='<input id="modal-llave" placeholder="Ej: 12, A3, Caja 2..." style="width:100%;padding:9px 10px;border-radius:7px;border:1.5px solid #e2e8f0;font-size:13px;outline:none;background:#f8fafc;margin-bottom:14px"/>';
 
     html+='<div style="font-size:11px;font-weight:700;color:#475569;margin-bottom:5px;text-transform:uppercase">Tarea</div>';
-    html+='<input id="modal-desc" placeholder="Ej: Cambio aceite, pastillas freno..." style="width:100%;padding:9px 10px;border-radius:7px;border:1.5px solid #e2e8f0;font-size:13px;outline:none;background:#f8fafc;margin-bottom:14px"/>';
+    html+='<div style="display:flex;gap:6px;margin-bottom:14px">';
+    html+='<input id="modal-desc" placeholder="Ej: Cambio aceite, pastillas freno..." style="flex:1;padding:9px 10px;border-radius:7px;border:1.5px solid #e2e8f0;font-size:13px;outline:none;background:#f8fafc"/>';
+    html+='<button onclick="marcarComida()" style="padding:9px 12px;background:#f97316;color:white;border:none;border-radius:7px;font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap">🍽️</button>';
+    html+='</div>';
 
     html+='<div style="font-size:11px;font-weight:700;color:#475569;margin-bottom:5px;text-transform:uppercase">📅 Fecha y hora de entrega</div>';
     html+='<input id="modal-entrega" type="datetime-local" value="'+defDate+'" style="width:100%;padding:9px 10px;border-radius:7px;border:1.5px solid #e2e8f0;font-size:13px;outline:none;background:#f8fafc;margin-bottom:16px"/>';
