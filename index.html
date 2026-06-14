@@ -298,9 +298,10 @@ function render(){
 
         html+='<div draggable="true" ondragstart="onDragStart(event,\''+k+'\')" ondragover="onDragOver(event)" ondrop="onDrop(event,'+mec.id+',\''+diaStr+'\',\''+franja+'\')" onclick="abrirModal('+mec.id+',\''+diaStr+'\',\''+franja+'\')" style="width:'+CW+'px;height:'+CH+'px;flex-shrink:0;border:1.5px solid '+borderColor+';border-left:'+bleft+';border-radius:'+br+';background:'+bgColor+';display:flex;flex-direction:column;padding:5px 6px;position:relative;overflow:hidden;cursor:grab">';
 
-        // Fila 1: matrícula + llave
+        // Fila 1: matrícula + modelo + llave
         html+='<div style="display:flex;align-items:center;gap:4px;margin-bottom:2px">';
         html+='<div style="font-size:10px;font-weight:800;color:'+coche.color+';text-transform:uppercase">'+coche.matricula+'</div>';
+        html+='<div style="font-size:9px;color:#94a3b8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+coche.modelo+'</div>';
         if(asig.llave) html+='<span style="background:'+coche.color+';color:white;border-radius:4px;padding:0 4px;font-size:9px;font-weight:700">🔑'+asig.llave+'</span>';
         html+='</div>';
 
