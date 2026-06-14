@@ -42,9 +42,16 @@ var DIAS=["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
 var MESES=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
 
 var coches={},asignaciones={},conectado=false;
-var semana=getISOWeek(new Date());
 var hoy=new Date().getDay();
-var diaActivo=hoy>=1&&hoy<=5?hoy-1:0;
+var semana=getISOWeek(new Date());
+var diaActivo;
+if(hoy>=1&&hoy<=5){
+  diaActivo=hoy-1;
+} else {
+  // Sábado o domingo -> ir al lunes de la semana siguiente
+  semana=semana+1;
+  diaActivo=0;
+}
 var modal=null,modalCocheId=null,colorIdx=0,modalTipo='particular',modalRentingEmpresa='';
 
 function getISOWeek(d){
@@ -200,6 +207,13 @@ function onDrop(ev,mecId,dateStr,franja){
 function onDragOver(ev){ev.preventDefault();}
 function cerrarModal(){modal=null;render();}
 function cambiarSemana(d){semana=Math.min(Math.max(semana+d,1),52);render();}
+function irAHoy(){
+  var d=new Date().getDay();
+  semana=getISOWeek(new Date());
+  if(d>=1&&d<=5){diaActivo=d-1;}
+  else {semana=semana+1;diaActivo=0;}
+  render();
+}
 
 function render(){
   var lunes=getLunes(semana);
@@ -246,6 +260,7 @@ function render(){
   html+='<div style="background:white;border-bottom:1px solid #e2e8f0;padding:4px 10px;flex-shrink:0;display:flex;align-items:center;gap:6px">';
   html+='<button onclick="cambiarSemana(-1)" style="width:24px;height:24px;border-radius:6px;border:1px solid #e2e8f0;background:white;font-size:13px;cursor:pointer;font-weight:700;flex-shrink:0">‹</button>';
   html+='<div style="font-size:11px;font-weight:700;color:#94a3b8;white-space:nowrap">Sem '+semana+'</div>';
+  html+='<button onclick="irAHoy()" style="padding:3px 8px;border-radius:6px;border:1px solid #2563eb;background:#2563eb18;color:#2563eb;font-size:10px;font-weight:700;cursor:pointer;flex-shrink:0;white-space:nowrap">📍 Hoy</button>';
   html+='<div style="display:flex;gap:3px;flex:1">';
   dias.forEach(function(dia,di){
     var act=diaActivo===di;
