@@ -207,6 +207,7 @@ function onDrop(ev,mecId,dateStr,franja){
 function onDragOver(ev){ev.preventDefault();}
 function cerrarModal(){modal=null;render();}
 function cambiarSemana(d){semana=Math.min(Math.max(semana+d,1),52);render();}
+function setDia(i){diaActivo=i;render();}
 function irAHoy(){
   var d=new Date().getDay();
   semana=getISOWeek(new Date());
