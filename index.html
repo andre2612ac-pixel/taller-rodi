@@ -45,7 +45,7 @@ var coches={},asignaciones={},conectado=false;
 var semana=getISOWeek(new Date());
 var hoy=new Date().getDay();
 var diaActivo=hoy>=1&&hoy<=5?hoy-1:0;
-var modal=null,modalCocheId=null,colorIdx=0;
+var modal=null,modalCocheId=null,colorIdx=0,modalTipo='particular',modalRentingEmpresa='';
 
 function getISOWeek(d){
   var date=new Date(d);date.setHours(0,0,0,0);
@@ -95,6 +95,8 @@ function abrirModal(mecId,dateStr,franja){
   var asig=asignaciones[k];
   modal={mecId:mecId,dateStr:dateStr,franja:franja,editando:!!asig,key:k};
   modalCocheId=asig?asig.cocheId:null;
+  modalTipo=asig&&asig.tipo?asig.tipo:'particular';
+  modalRentingEmpresa=asig&&asig.rentingEmpresa?asig.rentingEmpresa:'';
   render();
   setTimeout(function(){
     if(asig){
@@ -104,6 +106,13 @@ function abrirModal(mecId,dateStr,franja){
     }
     var el=document.getElementById('modal-llave');if(el)el.focus();
   },50);
+}
+function setTipo(t){
+  modalTipo=t;
+  var el=document.getElementById('modal-renting');
+  if(el)modalRentingEmpresa=el.value;
+  render();
+  setTimeout(function(){var e=document.getElementById('modal-renting');if(e)e.focus();},50);
 }
 function selCoche(id){
   modalCocheId=id;render();
@@ -115,6 +124,8 @@ function guardar(){
   if(!desc)return;
   var llave=document.getElementById('modal-llave').value.trim()||'';
   var entrega=document.getElementById('modal-entrega').value||'';
+  var rentingEl=document.getElementById('modal-renting');
+  var rentingEmpresa=rentingEl?rentingEl.value.trim():'';
   var k=getKey(modal.mecId,new Date(modal.dateStr+'T12:00:00'),modal.franja);
   var asigActual=asignaciones[k]||{};
   db.ref('asignaciones/'+k).set({
@@ -122,6 +133,8 @@ function guardar(){
     descripcion:desc,
     llave:llave,
     entrega:entrega,
+    tipo:modalTipo,
+    rentingEmpresa:modalTipo==='renting'?rentingEmpresa:'',
     llaveRecibida:asigActual.llaveRecibida||false,
     llaveNumero:asigActual.llaveNumero||'',
     materialPreparado:asigActual.materialPreparado||false
@@ -294,6 +307,11 @@ function render(){
         // Fila 2: descripción
         html+='<div style="font-size:10px;color:#475569;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:2px">'+asig.descripcion+'</div>';
 
+        // Fila tipo vehículo
+        if(asig.tipo==='renting'){
+          html+='<div style="font-size:8px;color:#7c3aed;font-weight:700;margin-bottom:2px">🏢 '+(asig.rentingEmpresa||'Renting')+'</div>';
+        }
+
         // Fila 3: entrega
         if(asig.entrega){
           html+='<div style="font-size:9px;color:'+(vencido?'#dc2626':'#16a34a')+';font-weight:700;margin-bottom:4px">⏰ '+formatEntrega(asig.entrega)+'</div>';
@@ -334,9 +352,20 @@ function render(){
     cochesArr.forEach(function(c){
       var sel=modalCocheId==c.id;
       html+='<button onclick="selCoche('+c.id+')" style="display:flex;align-items:center;gap:5px;padding:5px 11px;border-radius:20px;border:2px solid '+(sel?c.color:'#e2e8f0')+';background:'+(sel?c.color+'18':'#f8fafc')+';color:'+(sel?c.color:'#64748b')+';font-weight:700;font-size:12px;cursor:pointer">';
-      html+='<span style="width:8px;height:8px;border-radius:50%;background:'+c.color+';display:inline-block"></span>'+c.matricula+'</button>';
+      html+='<span style="width:8px;height:8px;border-radius:50%;background:'+c.color+';display:inline-block"></span>'+c.matricula+' <span style="font-weight:400;opacity:.7">· '+c.modelo+'</span></button>';
     });
     html+='</div></div>';
+
+    // Tipo propiedad
+    html+='<div style="font-size:11px;font-weight:700;color:#475569;margin-bottom:5px;text-transform:uppercase">Tipo de vehículo</div>';
+    var tipoActual=modalTipo||'particular';
+    html+='<div style="display:flex;gap:6px;margin-bottom:10px">';
+    html+='<button onclick="setTipo(\'particular\')" style="flex:1;padding:7px 0;border-radius:8px;border:2px solid '+(tipoActual==='particular'?'#2563eb':'#e2e8f0')+';background:'+(tipoActual==='particular'?'#2563eb18':'#f8fafc')+';color:'+(tipoActual==='particular'?'#2563eb':'#64748b')+';font-weight:700;font-size:12px;cursor:pointer">👤 Particular</button>';
+    html+='<button onclick="setTipo(\'renting\')" style="flex:1;padding:7px 0;border-radius:8px;border:2px solid '+(tipoActual==='renting'?'#2563eb':'#e2e8f0')+';background:'+(tipoActual==='renting'?'#2563eb18':'#f8fafc')+';color:'+(tipoActual==='renting'?'#2563eb':'#64748b')+';font-weight:700;font-size:12px;cursor:pointer">🏢 Renting</button>';
+    html+='</div>';
+    if(tipoActual==='renting'){
+      html+='<input id="modal-renting" placeholder="Nombre de la empresa de renting" value="'+(modalRentingEmpresa||'')+'" style="width:100%;padding:9px 10px;border-radius:7px;border:1.5px solid #e2e8f0;font-size:13px;outline:none;background:#f8fafc;margin-bottom:14px"/>';
+    }
 
     html+='<div style="font-size:11px;font-weight:700;color:#475569;margin-bottom:5px;text-transform:uppercase">🔑 Nº de Llave</div>';
     html+='<input id="modal-llave" placeholder="Ej: 12, A3, Caja 2..." style="width:100%;padding:9px 10px;border-radius:7px;border:1.5px solid #e2e8f0;font-size:13px;outline:none;background:#f8fafc;margin-bottom:14px"/>';
