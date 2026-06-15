@@ -155,14 +155,18 @@ function eliminarAsig(mecId,dateStr,franja){
 function toggleLlave(mecId,dateStr,franja,val){
   var k=getKey(mecId,new Date(dateStr+'T12:00:00'),franja);
   if(val){
-    // Si ya está activado, desactivar
+    if(!confirm('¿Seguro que quieres quitar la llave recibida y la ubicación de aparcamiento?'))return;
     db.ref('asignaciones/'+k+'/llaveRecibida').set(false);
     db.ref('asignaciones/'+k+'/llaveNumero').set('');
+    db.ref('asignaciones/'+k+'/aparcado').set('');
   } else {
     var num=prompt('Número de llave recibida:');
     if(num===null)return;
+    var lugar=prompt('¿Dónde está aparcado el coche?');
+    if(lugar===null)lugar='';
     db.ref('asignaciones/'+k+'/llaveRecibida').set(true);
     db.ref('asignaciones/'+k+'/llaveNumero').set(num.trim());
+    db.ref('asignaciones/'+k+'/aparcado').set(lugar.trim());
   }
 }
 function toggleMaterial(mecId,dateStr,franja,val){
