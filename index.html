@@ -122,7 +122,7 @@ function setTipo(t){
   setTimeout(function(){var e=document.getElementById('modal-renting');if(e)e.focus();},50);
 }
 function selCoche(id){
-  modalCocheId=id;render();
+  modalCocheId=id?Number(id):null;render();
   setTimeout(function(){var el=document.getElementById('modal-llave');if(el)el.focus();},50);
 }
 function guardar(){
@@ -328,6 +328,10 @@ function render(){
         if(asig.tipo==='renting'){
           html+='<div style="font-size:8px;color:#7c3aed;font-weight:700;margin-bottom:2px">🏢 '+(asig.rentingEmpresa||'Renting')+'</div>';
         }
+        // Aparcamiento
+        if(asig.aparcado){
+          html+='<div style="font-size:8px;color:#0891b2;font-weight:700;margin-bottom:2px">📍 '+asig.aparcado+'</div>';
+        }
 
         // Fila 3: entrega
         if(asig.entrega){
@@ -365,13 +369,15 @@ function render(){
 
     html+='<div style="margin-bottom:14px"><div style="font-size:11px;font-weight:700;color:#475569;margin-bottom:7px;text-transform:uppercase">Vehículo</div>';
     if(cochesArr.length===0) html+='<div style="font-size:12px;color:#94a3b8">Añade vehículos primero</div>';
-    html+='<div style="display:flex;flex-wrap:wrap;gap:6px">';
-    cochesArr.forEach(function(c){
+    var cochesOrdenados=cochesArr.slice().sort(function(a,b){return b.id-a.id;});
+    html+='<select id="modal-coche" onchange="selCoche(this.value)" style="width:100%;padding:9px 10px;border-radius:7px;border:1.5px solid #e2e8f0;font-size:13px;outline:none;background:#f8fafc;color:#1e293b;font-weight:700">';
+    html+='<option value="">-- Selecciona vehículo --</option>';
+    cochesOrdenados.forEach(function(c){
       var sel=modalCocheId==c.id;
-      html+='<button onclick="selCoche('+c.id+')" style="display:flex;align-items:center;gap:5px;padding:5px 11px;border-radius:20px;border:2px solid '+(sel?c.color:'#e2e8f0')+';background:'+(sel?c.color+'18':'#f8fafc')+';color:'+(sel?c.color:'#64748b')+';font-weight:700;font-size:12px;cursor:pointer">';
-      html+='<span style="width:8px;height:8px;border-radius:50%;background:'+c.color+';display:inline-block"></span>'+c.matricula+' <span style="font-weight:400;opacity:.7">· '+c.modelo+'</span></button>';
+      html+='<option value="'+c.id+'"'+(sel?' selected':'')+'>'+c.matricula+' · '+c.modelo+'</option>';
     });
-    html+='</div></div>';
+    html+='</select>';
+    html+='</div>';
 
     // Tipo propiedad
     html+='<div style="font-size:11px;font-weight:700;color:#475569;margin-bottom:5px;text-transform:uppercase">Tipo de vehículo</div>';
