@@ -107,11 +107,10 @@ function abrirModal(mecId,dateStr,franja){
   render();
   setTimeout(function(){
     if(asig){
-      var dl=document.getElementById('modal-llave');if(dl)dl.value=asig.llave||'';
       var dd=document.getElementById('modal-desc');if(dd)dd.value=asig.descripcion||'';
       var de=document.getElementById('modal-entrega');if(de&&asig.entrega)de.value=asig.entrega;
     }
-    var el=document.getElementById('modal-llave');if(el)el.focus();
+    var el=document.getElementById('modal-desc');if(el)el.focus();
   },50);
 }
 function setTipo(t){
@@ -119,17 +118,16 @@ function setTipo(t){
   var el=document.getElementById('modal-renting');
   if(el)modalRentingEmpresa=el.value;
   render();
-  setTimeout(function(){var e=document.getElementById('modal-renting');if(e)e.focus();},50);
+  setTimeout(function(){var e=document.getElementById('modal-renting')||document.getElementById('modal-desc');if(e)e.focus();},50);
 }
 function selCoche(id){
   modalCocheId=id?Number(id):null;render();
-  setTimeout(function(){var el=document.getElementById('modal-llave');if(el)el.focus();},50);
+  setTimeout(function(){var el=document.getElementById('modal-desc');if(el)el.focus();},50);
 }
 function guardar(){
   if(!modal||!modalCocheId)return;
   var desc=document.getElementById('modal-desc').value.trim();
   if(!desc)return;
-  var llave=document.getElementById('modal-llave').value.trim()||'';
   var entrega=document.getElementById('modal-entrega').value||'';
   var rentingEl=document.getElementById('modal-renting');
   var rentingEmpresa=rentingEl?rentingEl.value.trim():'';
@@ -138,12 +136,13 @@ function guardar(){
   db.ref('asignaciones/'+k).set({
     cocheId:modalCocheId,
     descripcion:desc,
-    llave:llave,
+    llave:asigActual.llave||'',
     entrega:entrega,
     tipo:modalTipo,
     rentingEmpresa:modalTipo==='renting'?rentingEmpresa:'',
     llaveRecibida:asigActual.llaveRecibida||false,
     llaveNumero:asigActual.llaveNumero||'',
+    aparcado:asigActual.aparcado||'',
     materialPreparado:asigActual.materialPreparado||false
   });
   modal=null;render();
@@ -221,7 +220,7 @@ function render(){
   var dias=[0,1,2,3,4].map(function(i){return addDays(lunes,i);});
   var diaActual=dias[diaActivo];
   var diaStr=dateKey(diaActual);
-  var COL=80,CW=148,CH=78;
+  var COL=80,CW=148,CH=98;
   var cochesArr=Object.values(coches);
 
   var html='<div style="display:flex;flex-direction:column;height:100vh;overflow:hidden">';
@@ -389,9 +388,6 @@ function render(){
     if(tipoActual==='renting'){
       html+='<input id="modal-renting" placeholder="Nombre de la empresa de renting" value="'+(modalRentingEmpresa||'')+'" style="width:100%;padding:9px 10px;border-radius:7px;border:1.5px solid #e2e8f0;font-size:13px;outline:none;background:#f8fafc;margin-bottom:14px"/>';
     }
-
-    html+='<div style="font-size:11px;font-weight:700;color:#475569;margin-bottom:5px;text-transform:uppercase">🔑 Nº de Llave</div>';
-    html+='<input id="modal-llave" placeholder="Ej: 12, A3, Caja 2..." style="width:100%;padding:9px 10px;border-radius:7px;border:1.5px solid #e2e8f0;font-size:13px;outline:none;background:#f8fafc;margin-bottom:14px"/>';
 
     html+='<div style="font-size:11px;font-weight:700;color:#475569;margin-bottom:5px;text-transform:uppercase">Tarea</div>';
     html+='<div style="display:flex;gap:6px;margin-bottom:14px">';
